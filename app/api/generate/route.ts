@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 const client = new OpenAI({
   baseURL: 'https://api.studio.nebius.com/v1/',
-  apiKey: process.env.NEBIUS_API_KEY, // Ensure this is set in your .env file
+  apiKey: process.env.NEBIUS_API_KEY, // Ensure your .env file contains the key
 });
 
 export async function POST(req: NextRequest) {
@@ -13,12 +13,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     console.log('Received request body:', body);
 
-    const { prompt } = body;
-    if (!prompt) {
+    const { prompt, editText } = body;
+    const finalPrompt = editText ? `${prompt}, but with changes: ${editText}` : prompt;
+
+    if (!finalPrompt) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
-
-    console.log('Making request with prompt:', prompt);
 
     const response = await client.images.generate({
       model: 'black-forest-labs/flux-dev',
@@ -31,16 +31,14 @@ export async function POST(req: NextRequest) {
         negative_prompt: '',
         seed: -1,
       },
-      prompt: prompt,
+      prompt: finalPrompt,
     });
-
-    console.log('Full Response:', response);
 
     if (!response.data || response.data.length === 0) {
       return NextResponse.json({ error: 'No image generated' }, { status: 500 });
     }
 
-    return NextResponse.json({ imageUrl: response.data[0].url});
+    return NextResponse.json({ imageUrl: response.data[0].url });
 
   } catch (error) {
     console.error('Error generating image:', error);
